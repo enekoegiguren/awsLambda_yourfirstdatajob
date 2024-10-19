@@ -2,7 +2,7 @@ import requests
 import json
 import pandas as pd
 
-from credentials import get_secret
+from utils.credentials import get_secret
 from datetime import datetime
 
 client_id, client_secret = get_secret()
@@ -150,29 +150,21 @@ def get_beginning_ending_dates(date1_str, date2_str):
 #token = get_token(client_id, client_secret)
 def get_data(min_date,
              max_date,
-             range,
+             max_results,
              mots,
              client_id,
              client_secret):
     
     beginning_date, ending_date = get_beginning_ending_dates(min_date,max_date)
-    all_offers = get_offers_data(range, mots, client_id, client_secret, beginning_date, ending_date)
+    all_offers = get_offers_data(max_results, mots, client_id, client_secret, beginning_date, ending_date)
 
     df = pd.DataFrame(all_offers)
 
     now = datetime.now()
     timestamp = now.strftime("%Y-%m-%d")
 
-
-    df.to_parquet(f'output_file_{min_date}_{max_date}_{timestamp}.parquet', index=False)
-
-get_data('2024-10-01',
-         '2024-10-17',
-         100,
-         'data',
-         client_id,
-         client_secret
-         )
+    return df 
+    #df.to_parquet(f'output_file_{min_date}_{max_date}_{timestamp}.parquet', index=False)
 
 
 
