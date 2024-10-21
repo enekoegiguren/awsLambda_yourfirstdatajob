@@ -94,3 +94,45 @@ def skills(df):
     return df
 
 
+def map_experience(value):
+    return 'Y' if value == 'E' else 'N'
+
+
+def extract_experience(value):
+
+    if value == 'Débutant accepté':
+        return 0
+    
+
+    match_years = re.search(r'(\d+)\s*An\(s\)', value)  
+    match_months = re.search(r'(\d+)\s*Mo(i)?s', value) 
+    
+
+    if match_years:
+        return int(match_years.group(1))  
+    elif match_months:
+        return int(match_months.group(1)) / 12  
+
+    return None  
+
+
+
+def extract_salary(value):
+    if pd.isna(value) or value is None:
+        return {'min_salary': None, 'max_salary': None, 'avg_salary': None}  
+
+    monthly_match = re.search(r'Mensuel de (\d+(?:\.\d+)?) Euros(?: à (\d+(?:\.\d+)?))?', value)
+
+    annual_match = re.search(r'Annuel de (\d+(?:\.\d+)?) Euros(?: à (\d+(?:\.\d+)?))?', value)
+
+    if monthly_match:
+        min_salary = float(monthly_match.group(1)) * 12  
+        max_salary = float(monthly_match.group(2)) * 12 if monthly_match.group(2) else min_salary
+    elif annual_match:
+        min_salary = float(annual_match.group(1)) 
+        max_salary = float(annual_match.group(2)) if annual_match.group(2) else min_salary
+    else:
+        return {'min_salary': None, 'max_salary': None, 'avg_salary': None}  
+
+    avg_salary = (min_salary + max_salary) / 2  
+    return {'min_salary': min_salary, 'max_salary': max_salary, 'avg_salary': avg_salary}
