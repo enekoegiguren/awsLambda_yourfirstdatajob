@@ -21,25 +21,20 @@ logging.basicConfig(level=logging.INFO)
 
 def handler(event, context):
     try:
-        # Retrieve client_id and client_secret
         client_id, client_secret = get_secret()
         
-        if not client_id or not client_secret:
-            raise ValueError("Client ID or Client Secret not found in the retrieved secret.")
+        # Perform your main logic here
+        full_charge()  # Replace with your function logic
 
-        logging.info("Handler started with client_id: %s", client_id)
-
-        # Call the full_charge function
-        full_charge()
-
-        logging.info("Handler completed successfully")
+        # Return a success response
         return {
             'statusCode': 200,
-            'body': 'Execution successful'
+            'body': json.dumps('Function executed successfully!')
         }
+
     except Exception as e:
-        logging.error(f"Error: {str(e)}")
+        # Handle any exceptions that occur
         return {
             'statusCode': 500,
-            'body': f"Error occurred: {str(e)}"
+            'body': json.dumps(f'Error: {str(e)}')
         }
