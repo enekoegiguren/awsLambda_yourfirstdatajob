@@ -100,7 +100,7 @@ def full_charge():
     max_results = 3000
     mots = 'data'
 
-    df = process_and_insert_data(min_data, extracted_date, max_results, mots, client_id, client_secret)
+    process_and_insert_data(min_data, extracted_date, max_results, mots, client_id, client_secret)
     
 def last_month_charge():
     #first day of the month
@@ -113,7 +113,7 @@ def last_month_charge():
     max_results = 3000
     mots = 'data'
 
-    df = process_and_insert_data(first_day_str, extracted_date, max_results, mots, client_id, client_secret)
+    process_and_insert_data(first_day_str, extracted_date, max_results, mots, client_id, client_secret)
     
 def requested_date_charge(first_date, last_date):
     #first day of the month
@@ -126,5 +126,7 @@ def requested_date_charge(first_date, last_date):
     max_results = 3000
     mots = 'data'
 
-    df = process_and_insert_data(first_day_str, last_day_str, max_results, mots, client_id, client_secret)
+    process_and_insert_data(first_day_str, last_day_str, max_results, mots, client_id, client_secret)
+    
+full_charge()
     

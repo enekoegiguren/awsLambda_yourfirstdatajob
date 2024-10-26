@@ -10,28 +10,36 @@ from sqlalchemy import create_engine
 from utils.credentials import *
 from utils.get_data import *
 from utils.transform_data import *
+from utils.insert_data import *
 
 
-client_id, client_secret = get_secret()
-
-min_data = '2024-10-01'
-max_data = '2024-10-19'
-max_results = 50
-mots = 'data'
-
-# Load the Parquet file into a DataFrame
-df = get_data(min_data,
-              max_data,
-              max_results,
-              mots,
-              client_id,
-              client_secret)
+import logging
 
 
-df['job_category'] = df['title'].apply(classify_job_title)
-df['chef'] = df['title'].apply(classify_job_title_chef)
-df = df[df['job_category'] != 'Other']
-df = dates(df)
+# Set up logging
+logging.basicConfig(level=logging.INFO)
 
-df = skills(df)
-df
+def handler(event, context):
+    try:
+        # Retrieve client_id and client_secret
+        client_id, client_secret = get_secret()
+        
+        if not client_id or not client_secret:
+            raise ValueError("Client ID or Client Secret not found in the retrieved secret.")
+
+        logging.info("Handler started with client_id: %s", client_id)
+
+        # Call the full_charge function
+        full_charge()
+
+        logging.info("Handler completed successfully")
+        return {
+            'statusCode': 200,
+            'body': 'Execution successful'
+        }
+    except Exception as e:
+        logging.error(f"Error: {str(e)}")
+        return {
+            'statusCode': 500,
+            'body': f"Error occurred: {str(e)}"
+        }
