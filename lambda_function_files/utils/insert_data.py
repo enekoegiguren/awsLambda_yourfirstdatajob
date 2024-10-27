@@ -3,6 +3,7 @@ import os
 from dotenv import load_dotenv
 import re
 import pickle
+from io import BytesIO
 
 import pandas as pd
 from sqlalchemy import create_engine
@@ -48,6 +49,29 @@ def append_to_db(df, conn_url):
             df.to_sql('ft_jobdata', conn, if_exists='append', index=False)
         except Exception as e:
             print(f"Erreur lors de l'insertion: {e}")
+            
+
+def upload_to_s3(dataframe, bucket_name, file_name):
+    """
+    Uploads a DataFrame to an S3 bucket as a Parquet file.
+
+    Parameters:
+    - dataframe (pd.DataFrame): DataFrame to upload.
+    - bucket_name (str): S3 bucket name.
+    - file_name (str): Name of the file to save in the bucket.
+    """
+    # Convert DataFrame to Parquet in memory
+    parquet_buffer = BytesIO()
+    dataframe.to_parquet(parquet_buffer, index=False)
+
+    # Upload to S3
+    s3_client = boto3.client('s3')
+    try:
+        parquet_buffer.seek(0)  # Move to the beginning of the buffer
+        s3_client.put_object(Bucket=bucket_name, Key=file_name, Body=parquet_buffer.getvalue())
+        print(f"Data successfully uploaded to {bucket_name}/{file_name}")
+    except Exception as e:
+        print(f"Failed to upload data to S3: {e}")
     
 def process_and_insert_data(min_data, max_data, max_results, mots, client_id, client_secret):
     # Charger les données
@@ -82,7 +106,7 @@ def process_and_insert_data(min_data, max_data, max_results, mots, client_id, cl
     df['min_salary'] = salary_data.apply(lambda x: x['min_salary'])
     df['max_salary'] = salary_data.apply(lambda x: x['max_salary'])
     df['avg_salary'] = salary_data.apply(lambda x: x['avg_salary'])
-    df.drop(columns=['salary'], inplace=True)
+    df.drop(columns=['salary', 'description'], inplace=True)
     
 
     existing_ids = get_existing_ids()
@@ -90,6 +114,7 @@ def process_and_insert_data(min_data, max_data, max_results, mots, client_id, cl
 
     if not new_rows.empty:
         append_to_db(new_rows, conn_url)
+        upload_to_s3(new_rows, "francejobdata", f"jobdata_{extracted_date}.parquet")  
     else:
         print("Aucune nouvelle donnée à insérer")
         
@@ -101,6 +126,8 @@ def full_charge():
     mots = 'data'
 
     process_and_insert_data(min_data, extracted_date, max_results, mots, client_id, client_secret)
+
+    return "Data inserted"
     
 def last_month_charge():
     #first day of the month
@@ -128,5 +155,5 @@ def requested_date_charge(first_date, last_date):
 
     process_and_insert_data(first_day_str, last_day_str, max_results, mots, client_id, client_secret)
     
-full_charge()
+
     
