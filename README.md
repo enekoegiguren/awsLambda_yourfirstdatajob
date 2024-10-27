@@ -1,6 +1,10 @@
 # Data Updater for the APP
 
-This repository stores the container image files for the AWS Lambda function that updates the data on the YourFirstDataJob APP. The main repository containing the app files is hosted [here](#).
+This repository stores the container image files for the AWS Lambda function that updates the data on the YourFirstDataJob APP. 
+
+
+![Alt text](https://github.com/enekoegiguren/lambda_jobdata/blob/main/lambda_jobdata.jpg)
+
 
 ## Structure
 
