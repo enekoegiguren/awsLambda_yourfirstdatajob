@@ -16,4 +16,4 @@ This AWS Lambda function executes the following tasks:
    - Calculation of minimum, maximum, and average salaries.
    - Skills identification.
 
-3. Inserts the data into a PostgreSQL database hosted on EC2.
+3. Inserts the data into a PostgreSQL database hosted on EC2 for use in the app and also into a bucket for data storage.
