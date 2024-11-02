@@ -3,7 +3,7 @@
 This repository stores the container image files for the AWS Lambda function that updates the data on the YourFirstDataJob APP. 
 
 
-![Alt text](https://github.com/enekoegiguren/lambda_jobdata/blob/main/awslambda_francejobdata.jpg)
+![Alt text](https://github.com/enekoegiguren/lambda_jobdata/blob/main/awsLambda_francejobdata.jpg)
 
 
 ## Structure
