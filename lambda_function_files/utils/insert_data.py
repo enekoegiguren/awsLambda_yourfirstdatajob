@@ -9,6 +9,11 @@ import pandas as pd
 from sqlalchemy import create_engine
 
 
+import os
+os.chdir('c:/Users/eneko/lambda_jobdata/lambda_function_files')
+
+
+
 from utils.credentials import *
 from utils.get_data import *
 from utils.transform_data import *
@@ -51,27 +56,97 @@ def append_to_db(df, conn_url):
             print(f"Erreur lors de l'insertion: {e}")
             
 
-def upload_to_s3(dataframe, bucket_name, file_name):
+# def upload_to_s3(dataframe, bucket_name, file_name):
+#     """
+#     Uploads a DataFrame to an S3 bucket as a Parquet file.
+
+#     Parameters:
+#     - dataframe (pd.DataFrame): DataFrame to upload.
+#     - bucket_name (str): S3 bucket name.
+#     - file_name (str): Name of the file to save in the bucket.
+#     """
+#     # Convert DataFrame to Parquet in memory
+#     parquet_buffer = BytesIO()
+#     dataframe.to_parquet(parquet_buffer, index=False)
+
+#     # Upload to S3
+#     s3_client = boto3.client('s3')
+#     try:
+#         parquet_buffer.seek(0)  # Move to the beginning of the buffer
+#         s3_client.put_object(Bucket=bucket_name, Key=file_name, Body=parquet_buffer.getvalue())
+#         print(f"Data successfully uploaded to {bucket_name}/{file_name}")
+#     except Exception as e:
+#         print(f"Failed to upload data to S3: {e}")
+
+def list_parquet_files(bucket_name, prefix=""):
+    s3_client = boto3.client('s3')
+    response = s3_client.list_objects_v2(Bucket=bucket_name, Prefix=prefix)
+    
+    if 'Contents' in response:
+        return [obj['Key'] for obj in response['Contents'] if obj['Key'].endswith('.parquet')]
+    return []
+
+def load_parquet_from_s3(bucket_name, file_key):
+    s3_client = boto3.client('s3')
+    parquet_object = s3_client.get_object(Bucket=bucket_name, Key=file_key)
+    return pd.read_parquet(BytesIO(parquet_object['Body'].read()))
+
+def delete_parquet_files(bucket_name, files):
     """
-    Uploads a DataFrame to an S3 bucket as a Parquet file.
+    Deletes specified files from the S3 bucket.
 
     Parameters:
-    - dataframe (pd.DataFrame): DataFrame to upload.
     - bucket_name (str): S3 bucket name.
-    - file_name (str): Name of the file to save in the bucket.
+    - files (list): List of file keys to delete.
     """
-    # Convert DataFrame to Parquet in memory
+    s3_client = boto3.client('s3')
+    delete_objects = [{'Key': file} for file in files]
+    s3_client.delete_objects(Bucket=bucket_name, Delete={'Objects': delete_objects})
+
+def upload_to_s3(dataframe, bucket_name, file_name):
     parquet_buffer = BytesIO()
     dataframe.to_parquet(parquet_buffer, index=False)
 
-    # Upload to S3
     s3_client = boto3.client('s3')
-    try:
-        parquet_buffer.seek(0)  # Move to the beginning of the buffer
-        s3_client.put_object(Bucket=bucket_name, Key=file_name, Body=parquet_buffer.getvalue())
-        print(f"Data successfully uploaded to {bucket_name}/{file_name}")
-    except Exception as e:
-        print(f"Failed to upload data to S3: {e}")
+    parquet_buffer.seek(0)
+    s3_client.put_object(Bucket=bucket_name, Key=file_name, Body=parquet_buffer.getvalue())
+    print(f"Data successfully uploaded to {bucket_name}/{file_name}")
+
+def merge_and_update_parquet(bucket_name, new_df, prefix=""):
+    """
+    Merges all Parquet files in S3 with new rows and uploads a single Parquet file.
+
+    Parameters:
+    - bucket_name (str): S3 bucket name.
+    - new_df (pd.DataFrame): New DataFrame with potential new rows.
+    - prefix (str): Prefix to filter files in the bucket (default is empty).
+    """
+    # Step 1: List and load all Parquet files from the bucket
+    parquet_files = list_parquet_files(bucket_name, prefix)
+    all_dataframes = []
+
+    for file_key in parquet_files:
+        df = load_parquet_from_s3(bucket_name, file_key)
+        all_dataframes.append(df)
+
+    # Step 2: Concatenate all existing data and drop duplicates
+    if all_dataframes:
+        merged_df = pd.concat(all_dataframes).drop_duplicates(subset='id')
+    else:
+        merged_df = pd.DataFrame()  # If no files are present
+
+    # Step 3: Filter new rows and concatenate with merged data
+    unique_new_rows = new_df[~new_df['id'].isin(merged_df['id'])]
+    final_df = pd.concat([merged_df, unique_new_rows]).drop_duplicates(subset='id')
+
+    # Step 4: Upload final DataFrame as a single Parquet file
+    extracted_date = pd.Timestamp.now().strftime("%Y%m%d")
+    output_file = f"jobdata_{extracted_date}.parquet"
+    upload_to_s3(final_df, bucket_name, output_file)
+
+    # Step 5: Delete old Parquet files
+    delete_parquet_files(bucket_name, parquet_files)
+    print("All previous Parquet files deleted from the bucket.")
     
 def process_and_insert_data(min_data, max_data, max_results, mots, client_id, client_secret):
     # Charger les données
@@ -111,10 +186,11 @@ def process_and_insert_data(min_data, max_data, max_results, mots, client_id, cl
 
     existing_ids = get_existing_ids()
     new_rows = filter_new_rows(df, existing_ids)
+    print(f"New rows to insert: {len(new_rows)}")
 
     if not new_rows.empty:
+        merge_and_update_parquet("francejobdata", new_rows, prefix="")  
         append_to_db(new_rows, conn_url)
-        upload_to_s3(new_rows, "francejobdata", f"jobdata_{extracted_date}.parquet")  
     else:
         print("Aucune nouvelle donnée à insérer")
         
