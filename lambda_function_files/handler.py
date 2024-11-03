@@ -23,17 +23,14 @@ def handler(event, context):
     try:
         client_id, client_secret = get_secret()
         
-        # Perform your main logic here
-        full_charge()  # Replace with your function logic
-
-        # Return a success response
+        last_month_charge()
         return {
             'statusCode': 200,
             'body': json.dumps('Function executed successfully!')
         }
 
     except Exception as e:
-        # Handle any exceptions that occur
+
         return {
             'statusCode': 500,
             'body': json.dumps(f'Error: {str(e)}')
