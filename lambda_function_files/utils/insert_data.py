@@ -9,10 +9,6 @@ import pandas as pd
 from sqlalchemy import create_engine
 
 
-import os
-os.chdir('c:/Users/eneko/lambda_jobdata/lambda_function_files')
-
-
 
 from utils.credentials import *
 from utils.get_data import *
