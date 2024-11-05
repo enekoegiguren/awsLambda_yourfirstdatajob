@@ -84,23 +84,13 @@ def upload_to_s3(dataframe, bucket_name, file_name):
     print(f"Data successfully uploaded to {bucket_name}/{file_name}")
 
 
-# Data Processing Functions
-def filter_new_rows(df, existing_ids):
-    return df[~df['id'].isin(existing_ids)]
-
-
-def merge_and_update_parquet(bucket_name, new_df, prefix=""):
-    # List parquet files in the bucket
+def get_parquet_files(bucket_name, prefix=""):
     parquet_files = list_parquet_files(bucket_name, prefix)
     print(f"Parquet files found: {parquet_files}")
     
     # Check if any parquet files exist
     if not parquet_files:
         print("No existing parquet files found. Uploading new DataFrame directly.")
-        extracted_date = pd.Timestamp.now().strftime("%Y%m%d")
-        output_file = f"jobdata_{extracted_date}.parquet"
-        upload_to_s3(new_df, bucket_name, output_file)
-        print(f"Uploaded new DataFrame to {output_file}.")
         return  # Exit the function after uploading
 
     all_dataframes = []
@@ -116,6 +106,30 @@ def merge_and_update_parquet(bucket_name, new_df, prefix=""):
             continue  # Skip this DataFrame if it lacks the 'id' column
         
         all_dataframes.append(df)
+        
+    return all_dataframes
+
+# Data Processing Functions
+def filter_new_rows(df, existing_ids):
+    return df[~df['id'].isin(existing_ids)]
+
+
+
+def merge_and_update_parquet(bucket_name, new_df, prefix=""):
+    
+    parquet_files = list_parquet_files(bucket_name, prefix)
+    
+    # Check if any parquet files exist
+    if not parquet_files:
+        print("No existing parquet files found. Uploading new DataFrame directly.")
+        extracted_date = pd.Timestamp.now().strftime("%Y%m%d")
+        output_file = f"jobdata_{extracted_date}.parquet"
+        upload_to_s3(new_df, bucket_name, output_file)
+        print(f"Uploaded new DataFrame to {output_file}.")
+        return  # Exit the function after uploading
+
+    # List parquet files in the bucket
+    all_dataframes = get_parquet_files(bucket_name, prefix)
 
     if all_dataframes:
         merged_df = pd.concat(all_dataframes, ignore_index=True).drop_duplicates(subset='id')
@@ -136,9 +150,15 @@ def merge_and_update_parquet(bucket_name, new_df, prefix=""):
     extracted_date = pd.Timestamp.now().strftime("%Y%m%d")
     output_file = f"jobdata_{extracted_date}.parquet"
 
-    # Upload the merged DataFrame to S3, replacing the old parquet file
+    # Delete old parquet files in the bucket
+    for file_key in parquet_files:
+        delete_parquet_files(bucket_name, file_key)
+        print(f"Deleted old file: {file_key}")
+
+    # Upload the merged DataFrame to S3
     upload_to_s3(final_df, bucket_name, output_file)
-    print(f"Updated the DataFrame and uploaded to {output_file}. Old parquet files retained in the bucket.")
+    print(f"Updated the DataFrame and uploaded to {output_file}. Only the latest file is retained in the bucket.")
+
 
 
 
@@ -172,7 +192,7 @@ def process_and_insert_data(min_data, max_data, max_results, mots, client_id, cl
     df.drop(columns=['salary', 'description'], inplace=True)
 
     # Update parquet and existing IDs
-    existing_data = merge_and_update_parquet(bucket_name, df, prefix="")
+    existing_data = get_parquet_files(bucket_name, prefix="")
     
     # Ensure existing_data is valid before proceeding
     if isinstance(existing_data, pd.DataFrame) and not existing_data.empty and 'id' in existing_data.columns:
@@ -214,5 +234,7 @@ def last_month_charge():
 
 def requested_date_charge(first_date, last_date):
     process_and_insert_data(first_date, last_date, 3000, 'data', client_id, client_secret)
+    
+last_month_charge()
 
 
