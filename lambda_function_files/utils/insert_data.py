@@ -6,6 +6,7 @@ from io import BytesIO
 
 import pandas as pd
 import boto3
+from botocore.exceptions import ClientError
 from sqlalchemy import create_engine
 
 import sys
@@ -70,9 +71,25 @@ def load_parquet_from_s3(bucket_name, file_key):
 
 
 def delete_parquet_files(bucket_name, files):
-    s3_client = get_s3_client()
+    s3_client = boto3.client('s3')  # Replace with get_s3_client() if defined
+    
+    # Prepare the delete request
     delete_objects = [{'Key': file} for file in files]
-    s3_client.delete_objects(Bucket=bucket_name, Delete={'Objects': delete_objects})
+    try:
+        response = s3_client.delete_objects(
+            Bucket=bucket_name,
+            Delete={'Objects': delete_objects}
+        )
+        # Print the full response to check for any deletion errors
+        print("Delete response:", response)
+
+        # Check if there are any errors in the deletion process
+        if 'Errors' in response:
+            print("Errors occurred while deleting some files:", response['Errors'])
+        else:
+            print("All specified files deleted successfully.")
+    except ClientError as e:
+        print("An error occurred:", e)
 
 
 def upload_to_s3(dataframe, bucket_name, file_name):
@@ -152,7 +169,7 @@ def merge_and_update_parquet(bucket_name, new_df, prefix=""):
 
     # Delete old parquet files in the bucket
     for file_key in parquet_files:
-        delete_parquet_files(bucket_name, file_key)
+        delete_parquet_files(bucket_name, [file_key])  # Pass file_key as a single-item list
         print(f"Deleted old file: {file_key}")
 
     # Upload the merged DataFrame to S3
