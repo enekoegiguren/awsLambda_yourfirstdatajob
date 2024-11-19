@@ -35,7 +35,7 @@ def classify_job_title(title):
         return 'Data Architect'
     elif re.search(r'data scientist|scientifique|science', title):
         return 'Data Scientist'
-    elif re.search(r'data manager|gestionnaire|manager|administrator|manager|gestion', title):
+    elif re.search(r'data manager|gestionnaire|manager|administrator|gestion', title):
         return 'Data Manager'
     elif re.search(r'data', title):
         return 'Other Data Position'
@@ -76,6 +76,7 @@ def skills(df):
     'java', 'scala', 'sas', 'matlab', 'power query', 'looker', 'apache', 'hive', 
     'terraform', 'jenkins', 'gitlab', 'machine learning', 'deep learning', 'nlp', 
     'api', 'pipeline', 'data governance','erp', 'ssis', 'ssas', 'ssrs', 'ssms', 'postgre', 'mysql', 'mongodb', 'cloud',
+
     
     
     # Azure components

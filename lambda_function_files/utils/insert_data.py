@@ -206,7 +206,7 @@ def process_and_insert_data(min_data, max_data, max_results, mots, client_id, cl
     df['min_salary'] = salary_data.apply(lambda x: x['min_salary'])
     df['max_salary'] = salary_data.apply(lambda x: x['max_salary'])
     df['avg_salary'] = salary_data.apply(lambda x: x['avg_salary'])
-    df.drop(columns=['salary', 'description'], inplace=True)
+    #df.drop(columns=['salary', 'description'], inplace=True)
 
     # Update parquet and existing IDs
     existing_data = get_parquet_files(bucket_name, prefix="")
@@ -226,12 +226,12 @@ def process_and_insert_data(min_data, max_data, max_results, mots, client_id, cl
         merge_and_update_parquet(bucket_name, new_rows, prefix="")
         
         # Try to append new rows to the database
-        try:
-            append_to_db(new_rows, conn_url)
-            print(f"{len(new_rows)} rows appended to the database successfully.")
-        except Exception as e:
-            print(f"Error while appending to the database: {e}")
-            print(f"{len(new_rows)} rows appended to the bucket but the database is not currently working.")
+        #try:
+           # append_to_db(new_rows, conn_url)
+           # print(f"{len(new_rows)} rows appended to the database successfully.")
+        # except Exception as e:
+        #     print(f"Error while appending to the database: {e}")
+        #     print(f"{len(new_rows)} rows appended to the bucket but the database is not currently working.")
     else:
         print("No new data to insert.")
 
